@@ -12,6 +12,7 @@ const {handleChatMessage} = require('./handleChatMessage');
 let partnerTalkOptions = ["Protein Ai 🧠 Language Exchange Partner", "🙋‍♂️Language Exchange Partner Online🙋"]
 let promoteUs = "Support us by introducing us to your friends for activating your subscription after inviting your friends go to the invite your friends menu.";
 let channelJoin = `${channelUsername} ${channelUsername2}` + '\n join these channels to use the bot';
+let welcomeMessage = 'Welcome to Protein english bot';
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
@@ -161,6 +162,7 @@ async function sendCustomMessage(bot, chatId) {
     await bot.sendMessage(chatId, promoteUs, {
         reply_markup: {
             keyboard: [
+                [{text: partnerTalkOptions[0]}],
                 [{text: userProfile}],
                 [{text: aboutUs}]
             ],

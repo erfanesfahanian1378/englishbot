@@ -22,7 +22,7 @@ bot.on('message', async (msg) => {
     let userState = userStates.get(chatId);
     if (!userState) {
         userState = {
-            isRequestingImage: false,
+            isRequestingChat: false,
             isRequestingImageWithSize: false,
             isRequestingRecharge: false,
             isCompletingProfile: false,
@@ -103,7 +103,7 @@ bot.on('message', async (msg) => {
             await sendCustomMessage(bot, chatId);
         }
         userStates.set(chatId, {
-            isRequestingImage: false,
+            isRequestingChat: false,
             isRequestingRecharge: false,
             isCompletingProfile: false,
             isInvitingFriend: false,
@@ -153,7 +153,12 @@ bot.on('message', async (msg) => {
             });
         }
     } else if (text === partnerTalkOptions[0]) {
-        await handleChatMessage(bot, chatId, text);
+        userStates.set(chatId, {
+            isRequestingChat: true,
+        });
+        await handleChatMessage(bot, chatId, text, "request");
+    } else if (userState.isRequestingChat) {
+        await handleChatMessage(bot, chatId, text, "chat");
     } else {
     }
 });

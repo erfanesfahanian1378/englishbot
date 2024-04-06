@@ -17,7 +17,16 @@ let promoteUs = "Support us by introducing us to your friends for activating you
 let channelJoin = `${channelUsername} ${channelUsername2}` + '\n join these channels to use the bot';
 let welcomeMessage = 'Welcome to Protein english bot';
 const endChat = "end the chat😢";
+const searching = "We are searching for the right person please be patient";
+const searchIcon = "🔎";
 const wrongInput = "You are not connected to anyone☹️😢";
+const opts = {
+    reply_markup: {
+        inline_keyboard: [
+            [{text: 'End Searching', callback_data: 'end_searching'}] // 'callback_data' is what gets sent back to your bot
+        ]
+    }
+};
 
 const voiceDir = path.join(__dirname, 'voice');
 if (!fs.existsSync(voiceDir)) {
@@ -54,13 +63,11 @@ bot.on('message', async (msg) => {
         const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
         const fileName = `${fileId}.oga`;
         const voiceFilePath = path.join(voiceDir, fileName);
-
         const response = await axios({
             method: 'get',
             url: fileUrl,
             responseType: 'stream'
         });
-
         // Pipe the file stream to a file
         response.data.pipe(fs.createWriteStream(voiceFilePath))
             .on('finish', () => {
@@ -221,16 +228,9 @@ bot.on('message', async (msg) => {
         userStates.set(chatId, {
             isRequestingChat: true,
         });
+        await bot.sendMessage(chatId, searching , opts);
+        await bot.sendMessage(chatId, searchIcon);
         await handleChatMessage(bot, chatId, text, "request");
-        // await bot.sendMessage(chatId, promoteUs, {
-        //     reply_markup: {
-        //         keyboard: [
-        //             [{text: endChat}],
-        //         ],
-        //         resize_keyboard: true,
-        //         one_time_keyboard: true
-        //     }
-        // });
     } else if (userState.isRequestingChat) {
         await handleChatMessage(bot, chatId, text, "chat");
         bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
@@ -280,4 +280,31 @@ async function checkChannelMembership2(chatId, userId) {
         bot.sendMessage(chatId, 'خطا در بررسی عضویت کانال.');
         return false;
     }
+}
+
+bot.on('callback_query', async (callbackQuery) => {
+    const chatId = callbackQuery.message.chat.id;
+    const data = callbackQuery.data;
+
+    // Check if the callback data from the button is to end the search
+    if (data === 'end_searching') {
+        // Call your function to end the searching process here
+        endSearchingForUser(chatId);
+
+        // Optional: Edit the message to reflect that the search has ended
+        bot.editMessageText('Search has been ended by the user.', {
+            chat_id: chatId,
+            message_id: callbackQuery.message.message_id,
+            reply_markup: {
+                inline_keyboard: []
+            }
+        });
+    }
+});
+
+// Define the function that ends the searching process
+function endSearchingForUser(chatId) {
+    // Your code to handle ending the search
+    console.log(`Ending search for user with chatId ${chatId}`);
+    // More logic...
 }

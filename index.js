@@ -1,10 +1,13 @@
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const token = '6997807654:AAF6mpVsX6o60o0uXPe29jjU-39e3r6VhH0' // this the test token
 const bot = new TelegramBot(token, {polling: true});
 const userStates = new Map();
 const channelUsername = '@englishcommunicatewithAI';
 const channelUsername2 = '@ProteinTeam';
+const channelForwardName = '@ForwardProteinEnglish';
 const joined = 'I joined';
 let userProfile = '📖✏️Your profile';
 let aboutUs = 'about us';
@@ -13,6 +16,14 @@ let partnerTalkOptions = ["Protein Ai 🧠 Language Exchange Partner", "🙋‍�
 let promoteUs = "Support us by introducing us to your friends for activating your subscription after inviting your friends go to the invite your friends menu.";
 let channelJoin = `${channelUsername} ${channelUsername2}` + '\n join these channels to use the bot';
 let welcomeMessage = 'Welcome to Protein english bot';
+const endChat = "end the chat😢";
+const wrongInput = "You are not connected to anyone☹️😢";
+
+const voiceDir = path.join(__dirname, 'voice');
+if (!fs.existsSync(voiceDir)) {
+    fs.mkdirSync(voiceDir, {recursive: true});
+}
+// isRequestingEndChat
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
@@ -23,7 +34,7 @@ bot.on('message', async (msg) => {
     if (!userState) {
         userState = {
             isRequestingChat: false,
-            isRequestingImageWithSize: false,
+            isRequestingEndChat: false,
             isRequestingRecharge: false,
             isCompletingProfile: false,
             isInvitingFriend: false,
@@ -36,8 +47,62 @@ bot.on('message', async (msg) => {
         userStates.set(chatId, userState);
     }
 
+    if (msg.voice) {
+        const fileId = msg.voice.file_id;
+        const fileResp = await bot.getFile(fileId);
+        const filePath = fileResp.file_path;
+        const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+        const fileName = `${fileId}.oga`;
+        const voiceFilePath = path.join(voiceDir, fileName);
 
-    if (text.startsWith('/start')) {
+        const response = await axios({
+            method: 'get',
+            url: fileUrl,
+            responseType: 'stream'
+        });
+
+        // Pipe the file stream to a file
+        response.data.pipe(fs.createWriteStream(voiceFilePath))
+            .on('finish', () => {
+                console.log(`Downloaded voice message saved to ${voiceFilePath}`);
+
+                // Once the download is complete, you can emit the custom identifier
+                const customIdentifier = `Protein_English_Bot_${fileName}`;
+                if (userState.isRequestingChat) {
+                    handleChatMessage(bot, chatId, customIdentifier, "chat");
+                    bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+                        .then(function (response) {
+                            // Message was forwarded successfully
+                            console.log("Message forwarded successfully:", response);
+                        })
+                        .catch(function (error) {
+                            // Handle any errors that occur
+                            console.error("Error forwarding message:", error);
+                        });
+                } else {
+                    bot.sendMessage(chatId, wrongInput, {
+                        reply_markup: {
+                            keyboard: [
+                                [{text: partnerTalkOptions[0]}],
+                                [{text: userProfile}],
+                                [{text: aboutUs}]
+                            ],
+                            resize_keyboard: true,
+                            one_time_keyboard: true
+                        }
+                    });
+                }
+                // Assuming you have a mechanism to emit this identifier through WebSocket
+                // socket.emit('chatMessage', { senderIdChat: chatId, content: customIdentifier, type: 'voice' });
+            })
+            .on('error', (error) => {
+                console.error(`Error downloading voice message: ${error}`);
+            });
+
+        // Emit this identifier to the WebSocket server like a text message
+        // const socket = /* Retrieve your socket instance */;
+        // socket.emit('chatMessage', {senderIdChat: chatId, content: customIdentifier, type: 'voice'});
+    } else if (text.startsWith('/start')) {
         console.log("this is id " + msg.from.id);
         console.log(msg.text)
 
@@ -107,7 +172,7 @@ bot.on('message', async (msg) => {
             isRequestingRecharge: false,
             isCompletingProfile: false,
             isInvitingFriend: false,
-            isRequestingImageWithSize: false,
+            isRequestingEndChat: false,
             isFinalRequestImage: false,
             createLogo: false,
             size: "",
@@ -157,8 +222,26 @@ bot.on('message', async (msg) => {
             isRequestingChat: true,
         });
         await handleChatMessage(bot, chatId, text, "request");
+        // await bot.sendMessage(chatId, promoteUs, {
+        //     reply_markup: {
+        //         keyboard: [
+        //             [{text: endChat}],
+        //         ],
+        //         resize_keyboard: true,
+        //         one_time_keyboard: true
+        //     }
+        // });
     } else if (userState.isRequestingChat) {
         await handleChatMessage(bot, chatId, text, "chat");
+        bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+            .then(function (response) {
+                // Message was forwarded successfully
+                console.log("Message forwarded successfully:", response);
+            })
+            .catch(function (error) {
+                // Handle any errors that occur
+                console.error("Error forwarding message:", error);
+            });
     } else {
     }
 });

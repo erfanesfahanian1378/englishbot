@@ -2,12 +2,24 @@
 const io = require('socket.io-client');
 
 async function handleChatMessage(bot, chatId, messageText, status) {
-    await bot.sendMessage(chatId, "Hi ");
     const socket = io('http://localhost:3002');
 
     socket.on('chaM', (data) => {
         console.log("this is data chatMessage", data);
-        bot.sendMessage(chatId, data.content);
+        if (data.content.includes("Protein_English_Bot_")) {
+            const filename = data.content.replace("Protein_English_Bot_" , "")
+            const localFilePath = `./voice/${filename}`;
+            console.log("this is local file path : " + localFilePath);
+            // Using bot.sendAudio to send the audio file from local file system
+            bot.sendAudio(chatId, localFilePath).then(() => {
+                console.log("Voice message sent successfully.");
+            }).catch((error) => {
+                console.error("Failed to send voice message:", error);
+            });
+
+        } else {
+            bot.sendMessage(chatId, data.content);
+        }
     });
     if (status === 'chat') {
         console.log("the status is chat");

@@ -5,9 +5,9 @@ async function handleChatMessage(bot, chatId, messageText, status) {
     const socket = io('http://localhost:3002');
 
     socket.on('chaM', (data) => {
-        console.log("this is data chatMessage", data);
+
         if (data.content.includes("Protein_English_Bot_")) {
-            const filename = data.content.replace("Protein_English_Bot_" , "")
+            const filename = data.content.replace("Protein_English_Bot_", "")
             const localFilePath = `./voice/${filename}`;
             console.log("this is local file path : " + localFilePath);
             // Using bot.sendAudio to send the audio file from local file system
@@ -17,6 +17,54 @@ async function handleChatMessage(bot, chatId, messageText, status) {
                 console.error("Failed to send voice message:", error);
             });
 
+        } else if (data.content.includes("Protein_English_Photo_")) {
+            const filename = data.content.replace("Protein_English_Photo_", "")
+            const localFilePath = `./media/${filename}`;
+            console.log("this is local file path : " + localFilePath);
+            // Using bot.sendAudio to send the audio file from local file system
+            bot.sendPhoto(chatId, localFilePath).then(() => {
+                console.log("photo sent successfully.");
+            }).catch((error) => {
+                console.error("Failed to send voice message:", error);
+            });
+        } else if (data.content.includes("Protein_English_Video2_")) {
+            const filename = data.content.replace("Protein_English_Video2_", "")
+            console.log("this is the id video");
+            console.log(filename);
+            console.log("this is the id video");
+            // const localFilePath = `./media/${filename}`;
+            // Using bot.sendAudio to send the audio file from local file system
+            bot.sendVideo(chatId, filename).then(() => {
+                console.log("photo sent successfully.");
+            }).catch((error) => {
+                console.error("Failed to send voice message:", error);
+            });
+        } else if (data.content.includes("Protein_English_Video_")) {
+            const filename = data.content.replace("Protein_English_Video2_", "")
+            const localFilePath = `./media/${filename}`;
+            console.log("this is local file path : " + localFilePath);
+            // Using bot.sendAudio to send the audio file from local file system
+            bot.sendVideo(chatId, localFilePath).then(() => {
+                console.log("photo sent successfully.");
+            }).catch((error) => {
+                console.error("Failed to send voice message:", error);
+            });
+        } else if (data.content.includes("Protein_English_Sticker_")) {
+            const stickerFileId = data.content.replace("Protein_English_Sticker_", "")
+            try {
+                bot.sendSticker(chatId, stickerFileId);
+                console.log(`Sticker sent with file_id: ${stickerFileId}`);
+            } catch (error) {
+                console.error(`Failed to send sticker: ${error}`);
+            }
+        } else if (data.content.includes("Protein_English_Document_")) {
+            const documentFileId = data.content.replace("Protein_English_Document_", "")
+            try {
+                bot.sendSticker(chatId, documentFileId);
+                console.log(`Document sent with file_id: ${documentFileId}`);
+            } catch (error) {
+                console.error(`Failed to send Document: ${error}`);
+            }
         } else {
             bot.sendMessage(chatId, data.content);
         }

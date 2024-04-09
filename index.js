@@ -32,6 +32,10 @@ const voiceDir = path.join(__dirname, 'voice');
 if (!fs.existsSync(voiceDir)) {
     fs.mkdirSync(voiceDir, {recursive: true});
 }
+const mediaDir = path.join(__dirname, 'media');
+if (!fs.existsSync(mediaDir)) {
+    fs.mkdirSync(mediaDir, {recursive: true});
+}
 // isRequestingEndChat
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
@@ -87,6 +91,7 @@ bot.on('message', async (msg) => {
                             console.error("Error forwarding message:", error);
                         });
                 } else {
+                    bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
                     bot.sendMessage(chatId, wrongInput, {
                         reply_markup: {
                             keyboard: [
@@ -109,7 +114,120 @@ bot.on('message', async (msg) => {
         // Emit this identifier to the WebSocket server like a text message
         // const socket = /* Retrieve your socket instance */;
         // socket.emit('chatMessage', {senderIdChat: chatId, content: customIdentifier, type: 'voice'});
-    } else if (text.startsWith('/start')) {
+    } else if (msg.photo) {
+        const photo = msg.photo[msg.photo.length - 1];
+        const photoFileId = photo.file_id;
+        const photoFileResp = await bot.getFile(photoFileId);
+        const photoFilePath = photoFileResp.file_path;
+        const photoFileUrl = `https://api.telegram.org/file/bot${token}/${photoFilePath}`;
+        const photoFileName = `${photoFileId}.jpg`;
+        const localPhotoFilePath = path.join(mediaDir, photoFileName);
+
+        // Download the photo using axios and save it to a local file
+        const photoResponse = await axios({
+            method: 'get',
+            url: photoFileUrl,
+            responseType: 'stream'
+        });
+
+        photoResponse.data.pipe(fs.createWriteStream(localPhotoFilePath))
+            .on('finish', () => {
+                console.log(`Downloaded photo message saved to ${localPhotoFilePath}`);
+
+
+                if (userState.isRequestingChat) {
+                    bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+                    handleChatMessage(bot, chatId, `Protein_English_Photo_${photoFileName}`, "chat");
+                } else {
+                    bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+                    bot.sendMessage(chatId, wrongInput, {
+                        reply_markup: {
+                            keyboard: [
+                                [{text: partnerTalkOptions[0]}],
+                                [{text: userProfile}],
+                                [{text: aboutUs}]
+                            ],
+                            resize_keyboard: true,
+                            one_time_keyboard: true
+                        }
+                    });
+                }
+            })
+            .on('error', console.error);
+    } else if (msg.video) {
+        const videoFileId = msg.video.file_id;
+        if (userState.isRequestingChat) {
+            bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+            // Use a custom identifier for handling video messages
+            handleChatMessage(bot, chatId, `Protein_English_Video2_${videoFileId}`, "chat");
+        } else {
+            bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+            bot.sendMessage(chatId, wrongInput, {
+                reply_markup: {
+                    keyboard: [
+                        [{text: partnerTalkOptions[0]}],
+                        [{text: userProfile}],
+                        [{text: aboutUs}]
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true
+                }
+            });
+        }
+
+        // If you want to emit this video file ID via WebSocket
+        // socket.emit('chatMessage', { senderIdChat: chatId, content: videoFileId, type: 'video' });
+    } else if (msg.sticker) {
+        console.log("we are in the sticker");
+        // Handle sticker message
+        const stickerFileId = msg.sticker.file_id;
+        console.log("this is sticker file id " + stickerFileId);
+        // Depending on how you want to handle stickers, you could forward the sticker
+        // For example, you could emit a WebSocket event with the sticker file ID
+        if (userState.isRequestingChat) {
+            bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+            await handleChatMessage(bot, chatId, `Protein_English_Sticker_${stickerFileId}`, "chat");
+        } else {
+            bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+            bot.sendMessage(chatId, wrongInput, {
+                reply_markup: {
+                    keyboard: [
+                        [{text: partnerTalkOptions[0]}],
+                        [{text: userProfile}],
+                        [{text: aboutUs}]
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true
+                }
+            });
+        }
+    } else if (msg.document) {
+        // Here, you might check for MIME type as well if needed
+        // For example, if (msg.document.mime_type === 'video/mp4')
+
+        const gifFileId = msg.document.file_id;
+        console.log("this is document file id");
+        if (userState.isRequestingChat) {
+            bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+            await handleChatMessage(bot, chatId, `Protein_English_Document_${gifFileId}`, "chat");
+        } else {
+            bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+            bot.sendMessage(chatId, wrongInput, {
+                reply_markup: {
+                    keyboard: [
+                        [{text: partnerTalkOptions[0]}],
+                        [{text: userProfile}],
+                        [{text: aboutUs}]
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true
+                }
+            });
+        }
+        // Or if you want to emit this via WebSocket
+        // socket.emit('chatMessage', { senderIdChat: chatId, content: gifFileId, type: 'gif' });
+    } else if (text && text.startsWith('/start')) {
+
         console.log("this is id " + msg.from.id);
         console.log(msg.text)
 
@@ -186,7 +304,7 @@ bot.on('message', async (msg) => {
             steps: ""
         });
 
-    } else if (text === joined) {
+    } else if (text && text === joined) {
         console.log("this is id " + msg.from.id);
         // Check if the user is a member of the channel
         let isMember = await checkChannelMembership(chatId, msg.from.id);
@@ -224,14 +342,14 @@ bot.on('message', async (msg) => {
                 }
             });
         }
-    } else if (text === partnerTalkOptions[0]) {
+    } else if (text && text === partnerTalkOptions[0]) {
         userStates.set(chatId, {
             isRequestingChat: true,
         });
-        await bot.sendMessage(chatId, searching , opts);
+        await bot.sendMessage(chatId, searching, opts);
         await bot.sendMessage(chatId, searchIcon);
         await handleChatMessage(bot, chatId, text, "request");
-    } else if (userState.isRequestingChat) {
+    } else if (text && userState.isRequestingChat) {
         await handleChatMessage(bot, chatId, text, "chat");
         bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
             .then(function (response) {
@@ -243,6 +361,22 @@ bot.on('message', async (msg) => {
                 console.error("Error forwarding message:", error);
             });
     } else {
+        if (userState.isRequestingChat) {
+            const warningMessage = "⚠️Please send only text, voice messages, photos, videos, Sticker or Gif.⚠️";
+            await bot.sendMessage(chatId, warningMessage);
+        } else {
+            await bot.sendMessage(chatId, wrongInput, {
+                reply_markup: {
+                    keyboard: [
+                        [{text: partnerTalkOptions[0]}],
+                        [{text: userProfile}],
+                        [{text: aboutUs}]
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true
+                }
+            });
+        }
     }
 });
 

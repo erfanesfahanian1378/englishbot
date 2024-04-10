@@ -49,6 +49,14 @@ async function handleChatMessage(bot, chatId, messageText, status) {
             }).catch((error) => {
                 console.error("Failed to send voice message:", error);
             });
+        } else if (data.content.includes("Protein_English_VideoM_")) {
+            const VideoMId = data.content.replace("Protein_English_VideoM_", "")
+            try {
+                bot.sendVideoNote(chatId, VideoMId);
+                console.log(`Video message sent with file_id: ${VideoMId}`);
+            } catch (error) {
+                console.error(`Failed to send sticker: ${error}`);
+            }
         } else if (data.content.includes("Protein_English_Sticker_")) {
             const stickerFileId = data.content.replace("Protein_English_Sticker_", "")
             try {

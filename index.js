@@ -177,6 +177,26 @@ bot.on('message', async (msg) => {
 
         // If you want to emit this video file ID via WebSocket
         // socket.emit('chatMessage', { senderIdChat: chatId, content: videoFileId, type: 'video' });
+    } else if (msg.video_note) {
+        const videoNoteFileId = msg.video_note.file_id;
+        if (userState.isRequestingChat) {
+            bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+            // Use a custom identifier for handling video messages
+            handleChatMessage(bot, chatId, `Protein_English_VideoM_${videoNoteFileId}`, "chat");
+        } else {
+            bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+            bot.sendMessage(chatId, wrongInput, {
+                reply_markup: {
+                    keyboard: [
+                        [{text: partnerTalkOptions[0]}],
+                        [{text: userProfile}],
+                        [{text: aboutUs}]
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true
+                }
+            });
+        }
     } else if (msg.sticker) {
         console.log("we are in the sticker");
         // Handle sticker message
@@ -361,6 +381,9 @@ bot.on('message', async (msg) => {
                 console.error("Error forwarding message:", error);
             });
     } else {
+        console.log("this is in the else for seeing the type of message");
+        console.log(msg);
+        console.log("this is in the else for seeing the type of message");
         if (userState.isRequestingChat) {
             const warningMessage = "⚠️Please send only text, voice messages, photos, videos, Sticker or Gif.⚠️";
             await bot.sendMessage(chatId, warningMessage);

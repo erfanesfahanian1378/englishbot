@@ -5,7 +5,6 @@ async function handleChatMessage(bot, chatId, messageText, status) {
     const socket = io('http://localhost:3002');
 
     socket.on('chaM', (data) => {
-
         if (data.content.includes("Protein_English_Bot_")) {
             const filename = data.content.replace("Protein_English_Bot_", "")
             // Using bot.sendAudio to send the audio file from local file system
@@ -75,7 +74,15 @@ async function handleChatMessage(bot, chatId, messageText, status) {
             bot.sendMessage(chatId, data.content);
         }
     });
-    if (status === 'chat') {
+    if (status === 'disconnect') {
+        socket.emit('disconnect2', {senderIdChat: chatId});
+        setTimeout(() => {
+            socket.disconnect();
+            console.log('Client disconnect initiated');
+        }, 1000);
+        console.log("we are disconnected");
+
+    }else if (status === 'chat') {
         console.log("the status is chat");
         socket.emit('chatMessage', {senderIdChat: chatId, content: messageText});
     } else {

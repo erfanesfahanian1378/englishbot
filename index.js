@@ -36,6 +36,7 @@ const mediaDir = path.join(__dirname, 'media');
 if (!fs.existsSync(mediaDir)) {
     fs.mkdirSync(mediaDir, {recursive: true});
 }
+
 // isRequestingEndChat
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
@@ -420,22 +421,38 @@ bot.on('callback_query', async (callbackQuery) => {
     // Check if the callback data from the button is to end the search
     if (data === 'end_searching') {
         // Call your function to end the searching process here
-        endSearchingForUser(chatId);
+       await endSearchingForUser(chatId);
 
         // Optional: Edit the message to reflect that the search has ended
-        bot.editMessageText('Search has been ended by the user.', {
-            chat_id: chatId,
-            message_id: callbackQuery.message.message_id,
+        await bot.sendMessage(chatId, promoteUs, {
             reply_markup: {
-                inline_keyboard: []
+                keyboard: [
+                    [{text: partnerTalkOptions[0]}],
+                    [{text: userProfile}],
+                    [{text: aboutUs}]
+                ],
+                resize_keyboard: true,
+                one_time_keyboard: true
             }
         });
     }
 });
 
 // Define the function that ends the searching process
-function endSearchingForUser(chatId) {
+async function endSearchingForUser(chatId) {
     // Your code to handle ending the search
-    console.log(`Ending search for user with chatId ${chatId}`);
+    userStates.set(chatId, {
+        isRequestingChat: false,
+        isRequestingRecharge: false,
+        isCompletingProfile: false,
+        isInvitingFriend: false,
+        isRequestingEndChat: false,
+        isFinalRequestImage: false,
+        createLogo: false,
+        size: "",
+        steps: ""
+    });
+    await handleChatMessage(bot, chatId, "", "disconnect");
+
     // More logic...
 }

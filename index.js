@@ -61,59 +61,33 @@ bot.on('message', async (msg) => {
     }
 
     if (msg.voice) {
-        const fileId = msg.voice.file_id;
-        const fileResp = await bot.getFile(fileId);
-        const filePath = fileResp.file_path;
-        const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
-        const fileName = `${fileId}.oga`;
-        const voiceFilePath = path.join(voiceDir, fileName);
-        const response = await axios({
-            method: 'get',
-            url: fileUrl,
-            responseType: 'stream'
-        });
-        // Pipe the file stream to a file
-        response.data.pipe(fs.createWriteStream(voiceFilePath))
-            .on('finish', () => {
-                console.log(`Downloaded voice message saved to ${voiceFilePath}`);
-
-                // Once the download is complete, you can emit the custom identifier
-                const customIdentifier = `Protein_English_Bot_${fileName}`;
-                if (userState.isRequestingChat) {
-                    handleChatMessage(bot, chatId, customIdentifier, "chat");
-                    bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
-                        .then(function (response) {
-                            // Message was forwarded successfully
-                            console.log("Message forwarded successfully:", response);
-                        })
-                        .catch(function (error) {
-                            // Handle any errors that occur
-                            console.error("Error forwarding message:", error);
-                        });
-                } else {
-                    bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
-                    bot.sendMessage(chatId, wrongInput, {
-                        reply_markup: {
-                            keyboard: [
-                                [{text: partnerTalkOptions[0]}],
-                                [{text: userProfile}],
-                                [{text: aboutUs}]
-                            ],
-                            resize_keyboard: true,
-                            one_time_keyboard: true
-                        }
-                    });
+        const voiceFileId = msg.voice.file_id;
+        // Forward or handle the voice file ID
+        if (userState.isRequestingChat) {
+            handleChatMessage(bot, chatId, `Protein_English_Bot_${voiceFileId}`, "chat");
+            bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+                .then(function (response) {
+                    // Message was forwarded successfully
+                    console.log("Message forwarded successfully:", response);
+                })
+                .catch(function (error) {
+                    // Handle any errors that occur
+                    console.error("Error forwarding message:", error);
+                });
+        } else {
+            bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+            bot.sendMessage(chatId, wrongInput, {
+                reply_markup: {
+                    keyboard: [
+                        [{text: partnerTalkOptions[0]}],
+                        [{text: userProfile}],
+                        [{text: aboutUs}]
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true
                 }
-                // Assuming you have a mechanism to emit this identifier through WebSocket
-                // socket.emit('chatMessage', { senderIdChat: chatId, content: customIdentifier, type: 'voice' });
-            })
-            .on('error', (error) => {
-                console.error(`Error downloading voice message: ${error}`);
             });
-
-        // Emit this identifier to the WebSocket server like a text message
-        // const socket = /* Retrieve your socket instance */;
-        // socket.emit('chatMessage', {senderIdChat: chatId, content: customIdentifier, type: 'voice'});
+        }
     } else if (msg.photo) {
         const photo = msg.photo[msg.photo.length - 1];
         const photoFileId = photo.file_id;

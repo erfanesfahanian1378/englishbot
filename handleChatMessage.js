@@ -8,10 +8,8 @@ async function handleChatMessage(bot, chatId, messageText, status) {
 
         if (data.content.includes("Protein_English_Bot_")) {
             const filename = data.content.replace("Protein_English_Bot_", "")
-            const localFilePath = `./voice/${filename}`;
-            console.log("this is local file path : " + localFilePath);
             // Using bot.sendAudio to send the audio file from local file system
-            bot.sendAudio(chatId, localFilePath).then(() => {
+            bot.sendAudio(chatId, filename).then(() => {
                 console.log("Voice message sent successfully.");
             }).catch((error) => {
                 console.error("Failed to send voice message:", error);

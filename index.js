@@ -5,10 +5,12 @@ const path = require('path');
 const token = '6997807654:AAF6mpVsX6o60o0uXPe29jjU-39e3r6VhH0' // this the test token
 const bot = new TelegramBot(token, {polling: true});
 const userStates = new Map();
+const userScores = new Map();
 const channelUsername = '@englishcommunicatewithAI';
 const channelUsername2 = '@ProteinTeam';
 const channelForwardName = '@ForwardProteinEnglish';
 const joined = 'I joined';
+let lastMessageId = null;
 let userProfile = '📖✏️Your profile';
 let aboutUs = 'about us';
 const {handleChatMessage} = require('./handleChatMessage');
@@ -19,6 +21,7 @@ let welcomeMessage = 'Welcome to Protein english bot';
 const endChat = "end the chat😢";
 const searching = "We are searching for the right person please be patient";
 const searchIcon = "🔎";
+const initQuiz = "start the quiz";
 const wrongInput = "You are not connected to anyone☹️😢";
 const opts = {
     reply_markup: {
@@ -27,6 +30,99 @@ const opts = {
         ]
     }
 };
+const questions = [
+    {
+        text: 'What does the word "benevolent" mean?',
+        options: ['Malevolent', 'Kind-hearted', 'Indifferent', 'Mysterious'],
+        correctIndex: 1,
+        difficulty: 'Easy'
+    },
+    {
+        text: 'Choose the correct form of the verb to complete the sentence: "She ___ to the store yesterday."',
+        options: ['go', 'goes', 'went', 'going'],
+        correctIndex: 2,
+        difficulty: 'Easy'
+    },
+    {
+        text: 'Despite the rain, the match continued. What does this sentence suggest?',
+        options: ['The match was cancelled.', 'The rain stopped the match.', 'The match went on regardless of the rain.', 'The rain caused a delay in the match.'],
+        correctIndex: 2,
+        difficulty: 'Medium'
+    },
+    {
+        text: 'Not only did she finish her work on time, ___ she also helped her colleagues with theirs.',
+        options: ['but', 'and', 'or', 'nor'],
+        correctIndex: 0,
+        difficulty: 'Medium'
+    },
+    {
+        text: 'What does the word "esoteric" mean?',
+        options: ['Common', 'Obscure', 'Obvious', 'Entertaining'],
+        correctIndex: 1,
+        difficulty: 'Hard'
+    },
+    {
+        text: 'Identify the sentence that is grammatically correct.',
+        options: ['Him and I went to the market.', 'He and I went to the market.', 'Him and me went to the market.', 'He and me went to the market.'],
+        correctIndex: 1,
+        difficulty: 'Hard'
+    },
+    {
+        text: '"The sun was setting, casting a golden glow over the city." What time of day is described in the sentence?',
+        options: ['Morning', 'Noon', 'Evening', 'Midnight'],
+        correctIndex: 2,
+        difficulty: 'Easy'
+    },
+    {
+        text: 'Choose the option that correctly uses a semicolon.',
+        options: ['She loves cooking; her brother loves baking.', 'She loves cooking, her brother loves baking.', 'She loves cooking her brother loves baking.', 'She loves; cooking, her brother loves baking.'],
+        correctIndex: 0,
+        difficulty: 'Hard'
+    },
+    {
+        text: 'The word "lament" most nearly means?',
+        options: ['Celebrate', 'Regret', 'Ignore', 'Mourn'],
+        correctIndex: 3,
+        difficulty: 'Medium'
+    },
+    {
+        text: 'Which sentence is correctly punctuated?',
+        options: ['Its a beautiful day, isn\'t it?', 'It\'s a beautiful day isn\'t it.', 'It\'s a beautiful day, isn\'t it?', 'It\'s a beautiful day; isn\'t it?'],
+        correctIndex: 2,
+        difficulty: 'Medium'
+    },
+    {
+        text: '"Even as the debate raged on, her mind remained unswayed by the arguments presented." What does this suggest about her?',
+        options: ['She was easily convinced.', 'She changed her opinion frequently.', 'She was firm in her beliefs.', 'She did not understand the arguments.'],
+        correctIndex: 2,
+        difficulty: 'Hard'
+    },
+    {
+        text: 'Which sentence correctly uses "affect" and "effect"?',
+        options: ['The effect of the medication did not affect him.', 'The affect of the medication did not effect him.', 'The effect of the medication did not effected him.', 'The affect of the medication did not affected him.'],
+        correctIndex: 0,
+        difficulty: 'Medium'
+    },
+    {
+        text: 'What is the meaning of "transparent"?',
+        options: ['Opaque', 'Translucent', 'Clear', 'Colored'],
+        correctIndex: 2,
+        difficulty: 'Easy'
+    },
+    {
+        text: 'Choose the sentence with correct parallel structure.',
+        options: ['She likes to run, swimming, and to jump.', 'She likes running, swimming, and jumping.', 'She likes to run, to swim, and jumping.', 'She likes running, to swim, and to jump.'],
+        correctIndex: 1,
+        difficulty: 'Hard'
+    },
+    {
+        text: 'After several years of research, the scientist concluded that the data did not support the hypothesis. What can be inferred from this sentence?',
+        options: ['The hypothesis was correct.', 'The scientist proved the hypothesis.', 'The data was inconclusive.', 'The hypothesis was likely incorrect based on the data.'],
+        correctIndex: 3,
+        difficulty: 'Medium'
+    }
+];
+
 
 const voiceDir = path.join(__dirname, 'voice');
 if (!fs.existsSync(voiceDir)) {
@@ -355,6 +451,8 @@ bot.on('message', async (msg) => {
                 // Handle any errors that occur
                 console.error("Error forwarding message:", error);
             });
+    } else if (text === initQuiz) {
+        await sendQuestion(chatId, 0);
     } else {
         console.log("this is in the else for seeing the type of message");
         console.log(msg);
@@ -383,6 +481,7 @@ async function sendCustomMessage(bot, chatId) {
         reply_markup: {
             keyboard: [
                 [{text: partnerTalkOptions[0]}],
+                [{text: initQuiz}],
                 [{text: userProfile}],
                 [{text: aboutUs}]
             ],
@@ -421,20 +520,47 @@ bot.on('callback_query', async (callbackQuery) => {
     // Check if the callback data from the button is to end the search
     if (data === 'end_searching') {
         // Call your function to end the searching process here
-       await endSearchingForUser(chatId);
+        await endSearchingForUser(chatId);
 
         // Optional: Edit the message to reflect that the search has ended
-        await bot.sendMessage(chatId, promoteUs, {
-            reply_markup: {
-                keyboard: [
-                    [{text: partnerTalkOptions[0]}],
-                    [{text: userProfile}],
-                    [{text: aboutUs}]
-                ],
-                resize_keyboard: true,
-                one_time_keyboard: true
+       await sendCustomMessage(bot, chatId);
+    } else {
+        const parts = data.split('_');
+        if (parts[0] === 'answer') {
+            const questionIndex = parseInt(parts[1]);
+            const optionIndex = parseInt(parts[2]);
+            const question = questions[questionIndex];
+            const isCorrect = (optionIndex === question.correctIndex);
+
+            // Update score
+            if (!userScores.has(chatId)) {
+                userScores.set(chatId, 0);
+                console.log("new user score is ");
+                console.log(userScores);
+                console.log("new user score is ");
             }
-        });
+            if (isCorrect) {
+                const points = question.difficulty === 'Easy' ? 1 : (question.difficulty === 'Medium' ? 2 : 3);
+                userScores.set(chatId, userScores.get(chatId) + points);
+            }
+
+            // Provide feedback on the answer
+            const responseText = isCorrect ? 'Correct!' : 'Wrong answer!';
+            // await bot.sendMessage(chatId, responseText);
+
+            // Move to next question or finish the quiz
+            if (questionIndex + 1 < questions.length) {
+                sendQuestion(chatId, questionIndex + 1);
+            } else {
+                // Final score message
+                const finalScore = userScores.get(chatId);
+                const proficiencyLevel = finalScore >= 30 ? 'Expert' :
+                    finalScore >= 20 ? 'Advanced' :
+                        finalScore >= 10 ? 'Intermediate' : 'Beginner';
+                await bot.sendMessage(chatId, `Quiz finished! Your score: ${finalScore}/34. You are at the ${proficiencyLevel} level.`);
+                userScores.delete(chatId); // Optionally clear the score after reporting
+            }
+        }
     }
 });
 
@@ -456,3 +582,30 @@ async function endSearchingForUser(chatId) {
 
     // More logic...
 }
+
+async function sendQuestion(chatId, questionIndex) {
+    // If there's a last message and it's not the first question, delete the last message
+    if (lastMessageId && questionIndex > 0) {
+        await bot.deleteMessage(chatId, lastMessageId).catch(error => console.log('Error deleting message:', error));
+    }
+
+    const question = questions[questionIndex];
+    console.log(question);
+    const options = question.options.map((option, index) => {
+        return [{
+            text: option,
+            callback_data: `answer_${questionIndex}_${index}`  // Format: answer_questionIndex_optionIndex
+        }];
+    });
+
+    // Send the new question
+    const sentMessage = await bot.sendMessage(chatId, question.text, {
+        reply_markup: {
+            inline_keyboard: options
+        }
+    });
+
+    // Update lastMessageId with the new message's ID
+    lastMessageId = sentMessage.message_id;
+}
+

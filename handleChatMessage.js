@@ -92,7 +92,7 @@ async function handleChatMessage(bot, chatId, messageText, status) {
             socket.emit('requestChat', {idchat: chatId, dataSender: "this is the data"});
         });
         socket.on('chatPartnerDisconnected', (data) => {
-            console.log(chatId + " : " + data);
+            bot.sendMessage(chatId, "Your partner left the chat");
             // Proceed to establish chat with the partner
         });
         socket.on('matchFound', (data) => {

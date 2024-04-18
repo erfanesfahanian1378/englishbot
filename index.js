@@ -18,10 +18,12 @@ let partnerTalkOptions = ["Protein Ai 🧠 Language Exchange Partner", "🙋‍�
 let promoteUs = "Support us by introducing us to your friends for activating your subscription after inviting your friends go to the invite your friends menu.";
 let channelJoin = `${channelUsername} ${channelUsername2}` + '\n join these channels to use the bot';
 let welcomeMessage = 'Welcome to Protein english bot';
+const testFirst = ["You should take the test first", "✏️"];
 const endChat = "end the chat😢";
 const searching = "We are searching for the right person please be patient";
 const searchIcon = "🔎";
 const initQuiz = "start the quiz";
+const submitTest = "Your test submitted successfully";
 const wrongInput = "You are not connected to anyone☹️😢";
 const opts = {
     reply_markup: {
@@ -434,12 +436,19 @@ bot.on('message', async (msg) => {
             });
         }
     } else if (text && text === partnerTalkOptions[0]) {
-        userStates.set(chatId, {
-            isRequestingChat: true,
-        });
-        await bot.sendMessage(chatId, searching, opts);
-        await bot.sendMessage(chatId, searchIcon);
-        await handleChatMessage(bot, chatId, text, "request");
+        // localhost:3001/findTestEnglish?idChat=584379734
+        const response = await axios.get("http://localhost:3001/findTestEnglish?idChat=" + chatId);
+        if (response.length === 0) {
+            await bot.sendMessage(chatId, testFirst[0]);
+            await sendCustomMessageWithText(bot, chatId ,testFirst[1] );
+        } else {
+            userStates.set(chatId, {
+                isRequestingChat: true,
+            });
+            await bot.sendMessage(chatId, searching, opts);
+            await bot.sendMessage(chatId, searchIcon);
+            await handleChatMessage(bot, chatId, text, "request");
+        }
     } else if (text && userState.isRequestingChat) {
         await handleChatMessage(bot, chatId, text, "chat");
         bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
@@ -490,6 +499,20 @@ async function sendCustomMessage(bot, chatId) {
         }
     });
 }
+async function sendCustomMessageWithText(bot, chatId , text) {
+    await bot.sendMessage(chatId, text, {
+        reply_markup: {
+            keyboard: [
+                [{text: partnerTalkOptions[0]}],
+                [{text: initQuiz}],
+                [{text: userProfile}],
+                [{text: aboutUs}]
+            ],
+            resize_keyboard: true,
+            one_time_keyboard: true
+        }
+    });
+}
 
 async function checkChannelMembership(chatId, userId) {
     try {
@@ -523,7 +546,7 @@ bot.on('callback_query', async (callbackQuery) => {
         await endSearchingForUser(chatId);
 
         // Optional: Edit the message to reflect that the search has ended
-       await sendCustomMessage(bot, chatId);
+        await sendCustomMessage(bot, chatId);
     } else {
         const parts = data.split('_');
         if (parts[0] === 'answer') {
@@ -557,8 +580,23 @@ bot.on('callback_query', async (callbackQuery) => {
                 const proficiencyLevel = finalScore >= 30 ? 'Expert' :
                     finalScore >= 20 ? 'Advanced' :
                         finalScore >= 10 ? 'Intermediate' : 'Beginner';
+                await bot.deleteMessage(chatId, lastMessageId).catch(error => console.log('Error deleting message:', error));
+                await bot.sendMessage(chatId, '🎉');
                 await bot.sendMessage(chatId, `Quiz finished! Your score: ${finalScore}/34. You are at the ${proficiencyLevel} level.`);
                 userScores.delete(chatId); // Optionally clear the score after reporting
+                const object = {
+                    userId: chatId,
+                    level: proficiencyLevel,
+                    numberOfTest: finalScore,
+                }
+                axios.post('http://localhost:3001/submitEnglishTest', object)
+                    .then((res) => {
+                        console.log("this is res");
+                        bot.sendMessage(chatId, submitTest);
+                    })
+                    .catch((error) => {
+                        console.error('Error sending data to server:', error);
+                    });
             }
         }
     }

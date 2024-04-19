@@ -438,7 +438,7 @@ bot.on('message', async (msg) => {
     } else if (text && text === partnerTalkOptions[0]) {
         // localhost:3001/findTestEnglish?idChat=584379734
         const response = await axios.get("http://localhost:3001/findTestEnglish?idChat=" + chatId);
-        if (response.length === 0) {
+        if (response.data.length === 0) {
             await bot.sendMessage(chatId, testFirst[0]);
             await sendCustomMessageWithText(bot, chatId ,testFirst[1] );
         } else {

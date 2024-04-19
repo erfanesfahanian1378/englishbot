@@ -1,8 +1,19 @@
 // handleChatMessage.js
 const io = require('socket.io-client');
-
+const axios = require("axios");
+let userProfile = '📖✏️Your profile';
+let aboutUs = 'about us';
+const initQuiz = "start the quiz";
+let partnerTalkOptions = ["Protein Ai 🧠 Language Exchange Partner", "🙋‍♂️Language Exchange Partner Online🙋"]
 async function handleChatMessage(bot, chatId, messageText, status) {
     const socket = io('http://localhost:3002');
+    const opts = {
+        reply_markup: {
+            inline_keyboard: [
+                [{text: 'End Chat', callback_data: 'end_searching'}] // 'callback_data' is what gets sent back to your bot
+            ]
+        }
+    };
 
     socket.on('chaM', (data) => {
         if (data.content.includes("Protein_English_Bot_")) {
@@ -85,14 +96,29 @@ async function handleChatMessage(bot, chatId, messageText, status) {
     }else if (status === 'chat') {
         console.log("the status is chat");
         socket.emit('chatMessage', {senderIdChat: chatId, content: messageText});
+        await bot.sendMessage(chatId, "Message Received🎉", opts);
     } else {
-        socket.on('connect', () => {
+        socket.on('connect', async () => {
             console.log('Connected to the server');
             // Request a chat upon some user action
-            socket.emit('requestChat', {idchat: chatId, dataSender: "this is the data"});
+            const response = await axios.get("http://localhost:3001/findTestEnglish?idChat=" + chatId);
+            const level =  response.data[response.data.length - 1].level;
+            console.log(response.data.length);
+            socket.emit('requestChat', {idchat: chatId, dataSender: "this is the data", level: level});
         });
         socket.on('chatPartnerDisconnected', (data) => {
-            bot.sendMessage(chatId, "Your partner left the chat");
+             bot.sendMessage(chatId, "Your partner left the chat", {
+                reply_markup: {
+                    keyboard: [
+                        [{text: partnerTalkOptions[0]}],
+                        [{text: initQuiz}],
+                        [{text: userProfile}],
+                        [{text: aboutUs}]
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true
+                }
+            });
             // Proceed to establish chat with the partner
         });
         socket.on('matchFound', (data) => {

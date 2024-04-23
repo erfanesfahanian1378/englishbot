@@ -14,10 +14,11 @@ let lastMessageId = null;
 let userProfile = '📖✏️Your profile';
 let aboutUs = 'about us';
 const {handleChatMessage} = require('./handleChatMessage');
-let partnerTalkOptions = ["Protein Ai 🧠 Language Exchange Partner", "🙋‍♂️Language Exchange Partner Online🙋"]
+let partnerTalkOptions = ["🙋‍♂️Language Partner🙋", "🧠AI Language Partner🧠"]
 let promoteUs = "Support us by introducing us to your friends for activating your subscription after inviting your friends go to the invite your friends menu.";
 let channelJoin = `${channelUsername} ${channelUsername2}` + '\n join these channels to use the bot';
 let welcomeMessage = 'Welcome to Protein english bot';
+let chatWithAi = '';
 const testFirst = ["You should take the test first", "✏️"];
 const endChat = "end the chat😢";
 const searching = "We are searching for the right person please be patient";
@@ -148,7 +149,7 @@ bot.on('message', async (msg) => {
             isRequestingChat: false,
             isRequestingEndChat: false,
             isRequestingRecharge: false,
-            isCompletingProfile: false,
+            isReqestingChatWithAi: false,
             isInvitingFriend: false,
             isFinalRequestImage: false,
             createLogo: false,
@@ -179,6 +180,8 @@ bot.on('message', async (msg) => {
                 reply_markup: {
                     keyboard: [
                         [{text: partnerTalkOptions[0]}],
+                        [{text: partnerTalkOptions[1]}],
+                        [{text: initQuiz}],
                         [{text: userProfile}],
                         [{text: aboutUs}]
                     ],
@@ -217,6 +220,8 @@ bot.on('message', async (msg) => {
                         reply_markup: {
                             keyboard: [
                                 [{text: partnerTalkOptions[0]}],
+                                [{text: partnerTalkOptions[1]}],
+                                [{text: initQuiz}],
                                 [{text: userProfile}],
                                 [{text: aboutUs}]
                             ],
@@ -239,6 +244,8 @@ bot.on('message', async (msg) => {
                 reply_markup: {
                     keyboard: [
                         [{text: partnerTalkOptions[0]}],
+                        [{text: partnerTalkOptions[1]}],
+                        [{text: initQuiz}],
                         [{text: userProfile}],
                         [{text: aboutUs}]
                     ],
@@ -262,6 +269,8 @@ bot.on('message', async (msg) => {
                 reply_markup: {
                     keyboard: [
                         [{text: partnerTalkOptions[0]}],
+                        [{text: partnerTalkOptions[1]}],
+                        [{text: initQuiz}],
                         [{text: userProfile}],
                         [{text: aboutUs}]
                     ],
@@ -286,6 +295,8 @@ bot.on('message', async (msg) => {
                 reply_markup: {
                     keyboard: [
                         [{text: partnerTalkOptions[0]}],
+                        [{text: partnerTalkOptions[1]}],
+                        [{text: initQuiz}],
                         [{text: userProfile}],
                         [{text: aboutUs}]
                     ],
@@ -309,6 +320,8 @@ bot.on('message', async (msg) => {
                 reply_markup: {
                     keyboard: [
                         [{text: partnerTalkOptions[0]}],
+                        [{text: partnerTalkOptions[1]}],
+                        [{text: initQuiz}],
                         [{text: userProfile}],
                         [{text: aboutUs}]
                     ],
@@ -388,7 +401,7 @@ bot.on('message', async (msg) => {
         userStates.set(chatId, {
             isRequestingChat: false,
             isRequestingRecharge: false,
-            isCompletingProfile: false,
+            isReqestingChatWithAi: false,
             isInvitingFriend: false,
             isRequestingEndChat: false,
             isFinalRequestImage: false,
@@ -440,7 +453,7 @@ bot.on('message', async (msg) => {
         const response = await axios.get("http://localhost:3001/findTestEnglish?idChat=" + chatId);
         if (response.data.length === 0) {
             await bot.sendMessage(chatId, testFirst[0]);
-            await sendCustomMessageWithText(bot, chatId ,testFirst[1] );
+            await sendCustomMessageWithText(bot, chatId, testFirst[1]);
         } else {
             userStates.set(chatId, {
                 isRequestingChat: true,
@@ -462,6 +475,13 @@ bot.on('message', async (msg) => {
             });
     } else if (text === initQuiz) {
         await sendQuestion(chatId, 0);
+    } else if (text && text === partnerTalkOptions[1]) {
+        userStates.set(chatId, {
+            ...userState,
+            isReqestingChatWithAi: true
+        });
+    } else if (userState.isReqestingChatWithAi) {
+
     } else {
         console.log("this is in the else for seeing the type of message");
         console.log(msg);
@@ -474,6 +494,8 @@ bot.on('message', async (msg) => {
                 reply_markup: {
                     keyboard: [
                         [{text: partnerTalkOptions[0]}],
+                        [{text: partnerTalkOptions[1]}],
+                        [{text: initQuiz}],
                         [{text: userProfile}],
                         [{text: aboutUs}]
                     ],
@@ -490,6 +512,7 @@ async function sendCustomMessage(bot, chatId) {
         reply_markup: {
             keyboard: [
                 [{text: partnerTalkOptions[0]}],
+                [{text: partnerTalkOptions[1]}],
                 [{text: initQuiz}],
                 [{text: userProfile}],
                 [{text: aboutUs}]
@@ -499,11 +522,13 @@ async function sendCustomMessage(bot, chatId) {
         }
     });
 }
-async function sendCustomMessageWithText(bot, chatId , text) {
+
+async function sendCustomMessageWithText(bot, chatId, text) {
     await bot.sendMessage(chatId, text, {
         reply_markup: {
             keyboard: [
                 [{text: partnerTalkOptions[0]}],
+                [{text: partnerTalkOptions[1]}],
                 [{text: initQuiz}],
                 [{text: userProfile}],
                 [{text: aboutUs}]
@@ -608,7 +633,7 @@ async function endSearchingForUser(chatId) {
     userStates.set(chatId, {
         isRequestingChat: false,
         isRequestingRecharge: false,
-        isCompletingProfile: false,
+        isReqestingChatWithAi: false,
         isInvitingFriend: false,
         isRequestingEndChat: false,
         isFinalRequestImage: false,

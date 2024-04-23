@@ -4,7 +4,7 @@ const axios = require("axios");
 let userProfile = '📖✏️Your profile';
 let aboutUs = 'about us';
 const initQuiz = "start the quiz";
-let partnerTalkOptions = ["Protein Ai 🧠 Language Exchange Partner", "🙋‍♂️Language Exchange Partner Online🙋"]
+let partnerTalkOptions = ["🙋‍♂️Language Partner🙋", "🧠AI Language Partner🧠"]
 async function handleChatMessage(bot, chatId, messageText, status) {
     const socket = io('http://localhost:3002');
     const opts = {
@@ -111,6 +111,7 @@ async function handleChatMessage(bot, chatId, messageText, status) {
                 reply_markup: {
                     keyboard: [
                         [{text: partnerTalkOptions[0]}],
+                        [{text: partnerTalkOptions[1]}],
                         [{text: initQuiz}],
                         [{text: userProfile}],
                         [{text: aboutUs}]

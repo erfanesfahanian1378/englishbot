@@ -9,6 +9,7 @@ const userScores = new Map();
 const channelUsername = '@englishcommunicatewithAI';
 const channelUsername2 = '@ProteinTeam';
 const channelForwardName = '@ForwardProteinEnglish';
+const textCloseChat = "Chat is ended";
 const joined = 'I joined';
 let lastMessageId = null;
 let userProfile = '📖✏️Your profile';
@@ -26,6 +27,8 @@ const searchIcon = "🔎";
 const initQuiz = "start the quiz";
 const submitTest = "Your test submitted successfully";
 const wrongInput = "You are not connected to anyone☹️😢";
+const FormData = require('form-data');
+const therapyOption = ["If you wish to continue the chat session 🌿✨, please ignore the menus and discuss the continuation of the session with your partner 🧑‍⚕️🌟. However, if you would like to end the session, simply tap on the \"End Session\" button 🔴🛑", "end the therapy session"];
 const opts = {
     reply_markup: {
         inline_keyboard: [
@@ -142,6 +145,26 @@ bot.on('message', async (msg) => {
     const text = msg.text;
     let name = msg.from.first_name + "";
     let surName = msg.from.last_name + "";
+
+    plansMessage = `
+Hello dear ${name}! 🌈
+
+We're thrilled that you want to join us. To recharge your user account and enjoy 30 requests, you just need to transfer 1 Euro to the following IBAN number and send us the payment receipt. 😊💳
+
+IBAN Number:
+LT023250069833288118
+
+As soon as you send the payment slip to our account on Telegram, your user account will be charged within a maximum of one hour. ⏰🚀
+@nothingtoexplaintoyou
+
+Thank you for being awesome! 🎉💐
+
+If you are living in Iran 🇮🇷, please send 70 thousand Toman to this card number:
+5054 1610 1394 1236
+@nothingtoexplaintoyou
+`;
+
+
     let username = msg.from.username;
     let userState = userStates.get(chatId);
     if (!userState) {
@@ -174,6 +197,128 @@ bot.on('message', async (msg) => {
                     // Handle any errors that occur
                     console.error("Error forwarding message:", error);
                 });
+        } else if (userState.isReqestingChatWithAi) {
+
+
+            const result = await postTherapyToken(chatId);
+            if (result) {
+                await bot.sendMessage(channelForwardName, "------------New Message------------------");
+                bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+                    .then(function (response) {
+                        // Message was forwarded successfully
+                        console.log("Message forwarded successfully:", response);
+                    })
+                    .catch(function (error) {
+                        // Handle any errors that occur
+                        console.error("Error forwarding message:", error);
+                    });
+                await bot.sendMessage(chatId, "📮");
+                await bot.sendMessage(chatId, "your message sent please wait for the response");
+                console.log(userState.lastText);
+                console.log("this is here its a voice");
+                const fileId = msg.voice.file_id;
+                bot.getFile(fileId).then(async (file) => {
+                    const filePath = file.file_path;
+                    const downloadUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+
+                    try {
+                        // Download the file from Telegram
+                        const response = await axios({
+                            method: 'get',
+                            url: downloadUrl,
+                            responseType: 'stream'
+                        });
+
+                        // Prepare the file path for saving
+                        const timestamp = Date.now();
+                        const tempFilePath = path.join(__dirname, `${chatId}-${timestamp}-user-therapy.mp3`);
+
+                        // Save the file temporarily
+                        response.data.pipe(fs.createWriteStream(tempFilePath)).on('finish', () => {
+                            console.log('File downloaded.');
+
+                            // Prepare form data
+                            const formData = new FormData();
+                            formData.append('file', fs.createReadStream(tempFilePath));
+                            formData.append('idChat', msg.chat.id.toString());
+
+                            // Send the file to your server
+                            axios.post('http://localhost:3005/audioToTranscript', formData, {
+                                headers: formData.getHeaders()
+                            })
+                                .then((res) => {
+                                    console.log(res.data);
+                                    const userTextMessage = res.data.messages;
+                                    const name = userState.lastText;
+
+                                    axios.post('http://localhost:3005/therapy', {
+                                        message: userTextMessage,
+                                        idChat: chatId,
+                                        name: name
+                                    }).then(async (response) => {
+                                        await delay(3000);
+                                        const data = await fetchUntilDataReceived(chatId);
+                                        console.log("after fetch");
+                                        await bot.sendMessage(channelForwardName, "------------Bot response------------------");
+                                        await bot.sendMessage(channelForwardName, data.response[0].text.value);
+                                        await bot.sendMessage(chatId, data.response[0].text.value);
+                                        let object = {
+                                            message: data.response[0].text.value,
+                                            idChat: chatId
+                                        }
+
+                                        axios.post('http://localhost:3005/TextAudio', object)
+                                            .then((res) => {
+                                                console.log("this is res");
+                                                console.log(res);
+                                                const localFilePath = res.data.path + '/' + res.data.name
+                                                console.log(chatId);
+                                                bot.sendAudio(chatId, localFilePath)
+                                                bot.sendMessage(chatId, therapyOption[0], {
+                                                    reply_markup: {
+                                                        keyboard: [
+                                                            [{text: therapyOption[1]}],
+                                                        ],
+                                                        resize_keyboard: true,
+                                                        one_time_keyboard: true
+                                                    }
+                                                });
+                                            })
+                                            .catch((error) => {
+                                                console.error('Error sending data to server:', error);
+                                            });
+
+                                    }).catch((error) => {
+                                        console.log("error in the therapy post part");
+                                        console.log(error);
+                                    });
+                                })
+                                .catch((error) => {
+                                    console.error('Error sending file to server:', error);
+                                    // Remove the temporary file
+                                    fs.unlinkSync(tempFilePath);
+                                });
+
+                        });
+                    } catch (error) {
+                        console.error('Error downloading file:', error);
+                    }
+                });
+            } else {
+                await bot.sendMessage(chatId, plansMessage);
+                await sendCustomMessage(bot, chatId);
+                userStates.set(chatId, {
+                    isRequestingChat: false,
+                    isRequestingRecharge: false,
+                    isReqestingChatWithAi: false,
+                    isInvitingFriend: false,
+                    isRequestingEndChat: false,
+                    isFinalRequestImage: false,
+                    createLogo: false,
+                    size: "",
+                    steps: ""
+                });
+            }
         } else {
             bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
             bot.sendMessage(chatId, wrongInput, {
@@ -476,11 +621,97 @@ bot.on('message', async (msg) => {
     } else if (text === initQuiz) {
         await sendQuestion(chatId, 0);
     } else if (text && text === partnerTalkOptions[1]) {
+        await bot.sendMessage(chatId, "please send your text message or voice message");
         userStates.set(chatId, {
             ...userState,
             isReqestingChatWithAi: true
         });
+    } else if (text === therapyOption[1]) {
+        userStates.set(chatId, {
+            isRequestingChat: false,
+            isRequestingEndChat: false,
+            isRequestingRecharge: false,
+            isReqestingChatWithAi: false,
+            isInvitingFriend: false,
+            isFinalRequestImage: false,
+            createLogo: false,
+            lastText: "",
+            size: "",
+            steps: ""
+        });
+        axios.get('http://localhost:3005/stopAThread?idChat=' + chatId)
+            .then((res) => {
+                bot.sendMessage(chatId, textCloseChat);
+            })
+            .catch((error) => {
+                console.error('Error sending data to server:', error);
+            });
+        await sendCustomMessage(bot, chatId);
     } else if (userState.isReqestingChatWithAi) {
+        const result = await postTherapyToken(chatId);
+
+        if (result) {
+            await bot.sendMessage(channelForwardName, "------------New Message------------------");
+            await bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
+            await bot.sendMessage(chatId, "📮");
+            await bot.sendMessage(chatId, "your message sent please wait for the response");
+            axios.post('http://localhost:3005/therapy', {
+                message: text,
+                idChat: chatId,
+                name: name
+            }).then(async (response) => {
+                await delay(3000);
+                const data = await fetchUntilDataReceived(chatId);
+                console.log("after fetch");
+                await bot.sendMessage(channelForwardName, "------------Bot response------------------");
+                await bot.sendMessage(channelForwardName, data.response[0].text.value);
+                await bot.sendMessage(chatId, data.response[0].text.value);
+                let object = {
+                    message: data.response[0].text.value,
+                    idChat: chatId
+                }
+                axios.post('http://localhost:3005/TextAudio', object)
+                    .then((res) => {
+                        console.log("this is res");
+                        console.log(res);
+                        const localFilePath = res.data.path + '/' + res.data.name
+                        console.log(chatId);
+                        bot.sendAudio(chatId, localFilePath);
+                        bot.sendMessage(chatId, therapyOption[0], {
+                            reply_markup: {
+                                keyboard: [
+                                    [{text: therapyOption[1]}],
+                                ],
+                                resize_keyboard: true,
+                                one_time_keyboard: true
+                            }
+                        });
+                    })
+                    .catch((error) => {
+                        console.error('Error sending data to server:', error);
+                    });
+
+            }).catch((error) => {
+                console.log("error in the therapy post part");
+                console.log(error);
+            });
+        } else {
+            await bot.sendMessage(chatId, plansMessage);
+            await sendCustomMessage(bot, chatId);
+            userStates.set(chatId, {
+                isRequestingChat: false,
+                isRequestingEndChat: false,
+                isRequestingRecharge: false,
+                isReqestingChatWithAi: false,
+                isInvitingFriend: false,
+                isFinalRequestImage: false,
+                createLogo: false,
+                lastText: "",
+                size: "",
+                steps: ""
+            });
+        }
+
 
     } else {
         console.log("this is in the else for seeing the type of message");
@@ -671,4 +902,55 @@ async function sendQuestion(chatId, questionIndex) {
     // Update lastMessageId with the new message's ID
     lastMessageId = sentMessage.message_id;
 }
+
+async function postTherapyToken(chatId, object) {
+    try {
+        await axios.get('http://localhost:3005/therapyToken?idChat=' + chatId);
+        // If the post request is successful, return true
+        return true;
+    } catch (error) {
+        // If there is an error in the post request, return false
+        console.error(error); // Optional: log the error or handle it as needed
+        return false;
+    }
+}
+
+
+function fetchUntilDataReceived(idChat) {
+    console.log("after delay we are here");
+    return new Promise((resolve, reject) => {
+        const url = `http://localhost:3005/therapy?idChat=${idChat}`;
+
+        const fetchData = () => {
+            axios.get(url)
+                .then(response => {
+                    const data = response.data;
+                    console.log("this is response data");
+
+                    // Check if the response indicates the data is not ready
+                    if (data.response === "not ready") {
+                        console.log("Data not ready, trying again in 1 second...");
+                        // Wait for 1 second before trying again
+                        setTimeout(fetchData, 1000);
+                    } else {
+                        // Data is ready, resolve the Promise with the data
+                        resolve(data);
+                        console.log("data is ready");
+                        console.log(data);
+                        console.log("data is ready");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching data:", error);
+                    reject(error); // Reject the Promise if there is an error
+                });
+        };
+
+        fetchData(); // Start the fetching process
+    });
+}
+
+const delay = (delayInms) => {
+    return new Promise(resolve => setTimeout(resolve, delayInms));
+};
 

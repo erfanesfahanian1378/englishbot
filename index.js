@@ -13,6 +13,7 @@ const textCloseChat = "Chat is ended";
 const joined = 'I joined';
 let lastMessageId = null;
 let userProfile = '📖✏️Your profile';
+let aboutUsText = `At Protein, we are a dynamic and innovative team in the field of AI. 🚀👨‍💻👩‍💻 Offering a variety of creative services and solutions, 🌟🛠️ we strive to provide the public access to advanced AI tools. Our goal is to facilitate professional activities for working individuals by leveraging the power of AI. 💡🤖💼 We believe that everyone should have the opportunity to benefit from the wonders of this incredible technology for their own and societal good. 🌍❤️ Join us in building a brighter and smarter future together. 🌈🛠️🔮`;
 let aboutUs = 'about us';
 const {handleChatMessage} = require('./handleChatMessage');
 let partnerTalkOptions = ["🙋‍♂️Language Partner🙋", "🧠AI Language Partner🧠"]
@@ -713,6 +714,42 @@ If you are living in Iran 🇮🇷, please send 70 thousand Toman to this card n
         }
 
 
+    } else if (text === userProfile) {
+
+
+        let textProfile = "";
+        try {
+            const url = 'http://localhost:3001/messages?idChat=' + encodeURIComponent(msg.from.id);
+            const response = await axios.get(url);
+            console.log(response.data[0]);
+            let ProteinTeam = response.data[0].name; // Assuming this is how you get the team's name
+
+
+            textProfile = `
+Dear ${ProteinTeam},
+
+Here's the status of your subscriptions for Protein products:
+
+🔴 Allowed uses for the Therapy Bot 🧠: ${response.data[0].tokenMath} times
+
+🟢 Allowed uses for Cordraw Bot 🌉: ${response.data[0].tokenDallE} times
+
+🔵 Allowed uses for Chatter Bot 🖋: ${response.data[0].tokenTextGenerator} times
+
+🟠 Allowed uses for the English partner Bot 🎥: ${response.data[0].tokenFilmYab} times
+
+🟣 Allowed uses for the Doctor and Lab Test Bot 💉: ${response.data[0].tokenBloodTest} times
+
+🔶 Your account balance 💰💸: ${response.data[0].universalWallet} Euros`;
+
+            await bot.sendMessage(chatId, textProfile);
+            await sendCustomMessageWithText(bot, chatId, plansMessage);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            await bot.sendMessage(chatId, 'Error occured ');
+        }
+    } else if (text == aboutUs) {
+        await sendCustomMessageWithText(bot, chatId, aboutUsText);
     } else {
         console.log("this is in the else for seeing the type of message");
         console.log(msg);
@@ -848,7 +885,7 @@ bot.on('callback_query', async (callbackQuery) => {
                 axios.post('http://localhost:3001/submitEnglishTest', object)
                     .then((res) => {
                         console.log("this is res");
-                        bot.sendMessage(chatId, submitTest);
+                        sendCustomMessageWithText(bot, chatId, submitTest);
                     })
                     .catch((error) => {
                         console.error('Error sending data to server:', error);

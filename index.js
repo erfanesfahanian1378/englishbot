@@ -169,6 +169,7 @@ If you are living in Iran 🇮🇷, please send 70 thousand Toman to this card n
     let username = msg.from.username;
     if (username === "@Afshin_X") {
         await bot.sendMessage(chatId, "You banned asshole");
+        return;
     }
     let userState = userStates.get(chatId);
     if (!userState) {

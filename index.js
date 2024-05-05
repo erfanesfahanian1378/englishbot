@@ -1,8 +1,10 @@
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const fs = require('fs');
+const persianRegex = /[\u0600-\u06FF\uFB8A\u067E\u0686\u06AF]/;
 const path = require('path');
-const token = '6997807654:AAF6mpVsX6o60o0uXPe29jjU-39e3r6VhH0' // this the test token
+const token = '6997807654:AAF6mpVsX6o60o0uXPe29jjU-39e3r6VhH0';
+// const token = "6541226407:AAHKgY0lY39CHYwUyfPMdGNix5JIutG4F0g";
 const bot = new TelegramBot(token, {polling: true});
 const userStates = new Map();
 const userScores = new Map();
@@ -613,6 +615,10 @@ If you are living in Iran 🇮🇷, please send 70 thousand Toman to this card n
             await handleChatMessage(bot, chatId, text, "request");
         }
     } else if (text && userState.isRequestingChat) {
+        if (persianRegex.test(text)) {
+            await bot.sendMessage(chatId, "⚠️Please send messages in English.⚠️");
+            return; // Do not process the message further
+        }
         await handleChatMessage(bot, chatId, text, "chat");
         bot.forwardMessage(channelForwardName, msg.chat.id, msg.message_id)
             .then(function (response) {

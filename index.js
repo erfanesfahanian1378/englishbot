@@ -3,8 +3,8 @@ const axios = require('axios');
 const fs = require('fs');
 const persianRegex = /[\u0600-\u06FF\uFB8A\u067E\u0686\u06AF]/;
 const path = require('path');
-const token = '6997807654:AAF6mpVsX6o60o0uXPe29jjU-39e3r6VhH0';
-// const token = "6541226407:AAHKgY0lY39CHYwUyfPMdGNix5JIutG4F0g";
+const token = 'use yours';
+
 const bot = new TelegramBot(token, {polling: true});
 const userStates = new Map();
 const userScores = new Map();
